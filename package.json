@@ -1,0 +1,23 @@
+{
+  "name": "data-loader-for-dynamodb",
+  "version": "1.0.0",
+  "description": "Load data to your table of DynamoDB.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "data-loader-for-dynamodb"
+  ],
+  "author": "jhonatan-dev",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1090.0",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
