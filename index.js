@@ -89,7 +89,7 @@ app.post('/upload-json', async (req, res) => {
       "RequestItems": { [table_name]: contentParcial }
     };
 
-    responseFinal.push(params);
+    responseAPI.push(params);
 
     dynamoDB.batchWriteItem(params, (err, data) => {
       if (err) {
