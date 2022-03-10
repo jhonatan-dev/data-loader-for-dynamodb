@@ -2,22 +2,54 @@ const express = require('express');
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
+
+const swaggerJsdoc = require('swagger-jsdoc');
+const openapiSpecificationOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'API',
+      version: '1.0.0',
+    },
+  },
+  apis: ['./*.js']
+};
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = swaggerJsdoc(openapiSpecificationOptions);
+
 const AWS = require('aws-sdk');
 
 app.set("port", process.env.PORT || 3000);
 
-app.use(express.json({ limit : process.env.JSON_BODY_LIMIT || '20mb' }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '20mb' }));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-let credentials = new AWS.Credentials({ accessKeyId : process.env.AWS_ACCESS_KEY_ID || "local", secretAccessKey : process.env.AWS_SECRET_ACCESS_KEY || "local"});
+let credentials = new AWS.Credentials({ accessKeyId: process.env.AWS_ACCESS_KEY_ID || "local", secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "local" });
 
 AWS.config.credentials = credentials;
 
-AWS.config.update({region: process.env.AWS_DEFAULT_REGION || 'eu-west-1'});
+AWS.config.update({ region: process.env.AWS_DEFAULT_REGION || 'eu-west-1' });
 
 const endpoint = new AWS.Endpoint(process.env.AWS_ENDPOINT || "http://localhost:4566");
 
 const dynamoDB = new AWS.DynamoDB({ endpoint });
 
+app.get('/', async (req, res) => {
+
+  res.redirect("/api-docs");
+});
+
+/**
+ * @openapi
+ * /upload-json:
+ *   post:
+ *     description: Load data to your table of DynamoDB!
+ *     requestBody: { content : { "application/json" : { schema: { type: "object", properties: { content: { type: "string" }, table_name : { type: "string" }, partition_key_name : { type: "string" } } } } } }
+ *     responses:
+ *       200:
+ *         description: Returns response used array in DynamoDB's query
+ *         content: { "application/json" : { } }
+ */
 app.post('/upload-json', async (req, res) => {
   let { content, table_name, partition_key_name } = req.body;
 
@@ -25,9 +57,9 @@ app.post('/upload-json', async (req, res) => {
 
   content = content.Items.map((item) => {
     return {
-      "PutRequest" : {
-        "Item" : {
-          [partition_key_name] : item[partition_key_name],
+      "PutRequest": {
+        "Item": {
+          [partition_key_name]: item[partition_key_name],
           ...item
         }
       }
@@ -35,10 +67,10 @@ app.post('/upload-json', async (req, res) => {
   });
 
   let registrosPermitidos = 25;
-  
+
   let totalRegistros = content.length;
 
-  let totalRequests = Math.ceil(totalRegistros/registrosPermitidos);
+  let totalRequests = Math.ceil(totalRegistros / registrosPermitidos);
 
   console.log("Total elementos a insertar:", totalRegistros)
 
@@ -48,13 +80,13 @@ app.post('/upload-json', async (req, res) => {
     console.log("Request nro:", request)
 
     let indiceCorte = content.length > registrosPermitidos ? registrosPermitidos : content.length;
-    
+
     let contentParcial = content.slice(0, indiceCorte);
 
     console.log("Request nro:", request, "contentParcial total elementos:", contentParcial.length)
 
     let params = {
-      "RequestItems" : { [table_name] : contentParcial }
+      "RequestItems": { [table_name]: contentParcial }
     };
 
     responseFinal.push(params);
@@ -70,8 +102,8 @@ app.post('/upload-json', async (req, res) => {
     content = content.slice(indiceCorte, content.length);
 
     console.log("Request nro:", request, "content total elementos actualmente:", content.length)
- }
- 
+  }
+
   res.json(responseAPI).status(200);
 });
 
