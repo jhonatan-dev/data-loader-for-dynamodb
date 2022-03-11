@@ -44,11 +44,11 @@ app.get('/', async (req, res) => {
  * /upload-json:
  *   post:
  *     description: Load data to your table of DynamoDB!
- *     requestBody: { content : { "application/json" : { schema: { type: "object", properties: { content: { type: "string" }, table_name : { type: "string" }, partition_key_name : { type: "string" } } } } } }
+ *     requestBody: { content : { "application/json" : { schema: { type: "object", properties: { content: { type: "object", properties : { Items : { type : "array", items: { type : "object", properties : { "AttributeName" : { type : "object" , properties : { "AttributeDataType" } } } } }, Count : { type : "integer" }, ScannedCount : { type : "integer" }, ConsumedCapacity : { type : "object" } } }, table_name : { type: "string" }, partition_key_name : { type: "string" } } } } } }
  *     responses:
  *       200:
  *         description: Returns response used array in DynamoDB's query
- *         content: { "application/json" : { } }
+ *         content: { "application/json" : { schema : { type : "array", items : { type : "object", properties : { RequestItems : { type : "object", properties : { "TABLE_NAME" : { type : "array", items : { type : "object", properties : { "PutRequest" : { type : "object", properties : { "Item" : { type : "object", properties : { "AttributeName" : { type : "object", properties : { "AttributeDataType" } } } } } } } } } } }  } } } } }
  */
 app.post('/upload-json', async (req, res) => {
   let { content, table_name, partition_key_name } = req.body;
