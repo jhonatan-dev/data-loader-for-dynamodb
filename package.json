@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\""
+    "gui-local": "DYNAMO_ENDPOINT=http://localhost:4566 AWS_REGION=eu-west-1 AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local dynamodb-admin",
+    "gui-local-win": "set DYNAMO_ENDPOINT=http://localhost:4566 && set AWS_REGION=eu-west-1 && set AWS_ACCESS_KEY_ID=local && set AWS_SECRET_ACCESS_KEY=local && dynamodb-admin",
+    "test": "echo \"Tests not for now!\""
   },
   "keywords": [
     "data-loader-for-dynamodb"
@@ -20,6 +22,7 @@
     "swagger-ui-express": "^4.3.0"
   },
   "devDependencies": {
+    "dynamodb-admin": "^4.1.0",
     "nodemon": "^2.0.12"
   }
 }
