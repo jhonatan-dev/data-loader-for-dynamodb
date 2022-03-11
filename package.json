@@ -7,7 +7,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "gui-local": "DYNAMO_ENDPOINT=http://localhost:4566 AWS_REGION=eu-west-1 AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local dynamodb-admin",
-    "gui-local-win": "set DYNAMO_ENDPOINT=http://localhost:4566 && set AWS_REGION=eu-west-1 && set AWS_ACCESS_KEY_ID=local && set AWS_SECRET_ACCESS_KEY=local && dynamodb-admin",
+    "gui-local-win": "set DYNAMO_ENDPOINT=http://localhost:4566 AWS_REGION=eu-west-1 AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local && dynamodb-admin",
     "test": "echo \"Tests not for now!\""
   },
   "keywords": [
