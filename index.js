@@ -19,6 +19,20 @@ const swaggerDocument = swaggerJsdoc(openapiSpecificationOptions);
 
 const AWS = require('aws-sdk');
 
+const Logger = require('logplease');
+
+Logger.setLogLevel(Logger.LogLevels.DEBUG)
+
+const logger = Logger.create('logger', {
+  useColors: true,
+  color: Logger.Colors.White,
+  showTimestamp: true,
+  useLocalTime: false,
+  showLevel: true,
+  //filename: "application.log",
+  appendFile: true
+});
+
 app.set("port", process.env.PORT || 3000);
 
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '20mb' }));
@@ -27,6 +41,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 let credentials = new AWS.Credentials({ accessKeyId: process.env.AWS_ACCESS_KEY_ID || "local", secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "local" });
 
 AWS.config.credentials = credentials;
+
+AWS.config.logger = logger;
 
 AWS.config.update({ region: process.env.AWS_DEFAULT_REGION || 'eu-west-1' });
 
@@ -53,9 +69,112 @@ app.get('/', async (req, res) => {
 app.post('/upload-json', async (req, res) => {
   let { content, table_name, partition_key_name } = req.body;
 
+  let inputsValidation = isValidInput(content, table_name, partition_key_name);
+
+  if (inputsValidation != null) {
+    return res.json(inputsValidation).status(400);
+  }
+
+  let batchRecordsAllowed = 25;
+
+  let promisesGroupsAllowed = 4;
+
+  let temporalItems = [];
+
+  let promises = [];
+
   let responseAPI = [];
 
-  content = content.Items.map((item) => {
+  let batchEjecutionsNumber = 1;
+
+  let firstItem = true;
+
+  let totalRecords = content.Items.length;
+
+  let totalBatchGroups = Math.ceil(totalRecords / batchRecordsAllowed);
+
+  let totalBatchGroupsCalls = Math.ceil(totalBatchGroups / promisesGroupsAllowed);
+
+  logger.info(`Estimated records to save: ${totalRecords}`)
+
+  logger.info(`Estimated batch groups of ${batchRecordsAllowed} records to run: ${totalBatchGroups}`)
+
+  logger.info(`Estimated DynamoDB's calls of ${promisesGroupsAllowed} groups to run: ${totalBatchGroupsCalls}`)
+
+  for await (let item of content.Items) {
+
+    if (firstItem) {
+      firstItem = false;
+      continue
+    }
+
+    temporalItems.push(item);
+
+    if (temporalItems.length % batchRecordsAllowed === 0) {
+
+      logger.info(`Batch ejecution number: ${batchEjecutionsNumber}`);
+
+      let promise = getBatchWriteItemPromise(partition_key_name, table_name, temporalItems);
+
+      promises.push(promise);
+
+      if (promises.length % promisesGroupsAllowed === 0) {
+
+        logger.info(`Batch ejecution number: ${batchEjecutionsNumber}, waiting batchWriteItem process...`);
+
+        await Promise.all(promises);
+
+        promises = [];
+      }
+
+      temporalItems = [];
+
+      batchEjecutionsNumber++;
+    }
+
+  }
+
+  if (temporalItems.length > 0) {
+    logger.info(`Batch final ejecution number: ${batchEjecutionsNumber}`);
+
+    promises.push(getBatchWriteItemPromise(partition_key_name, table_name, temporalItems));
+  }
+
+  if (promises.length > 0) {
+    logger.info(`Batch final ejecution number: ${batchEjecutionsNumber}, waiting batchWriteItem process...`);
+
+    await Promise.all(promises);
+
+  }
+
+  logger.info("¡fin!")
+
+  res.json(responseAPI).status(200);
+});
+
+let isValidInput = (content, table_name, partition_key_name) => {
+  if (content == null) {
+    return { "message": "content field can't be null." };
+  }
+
+  if (table_name == null) {
+    return { "message": "table_name field can't be null." };
+  }
+
+  if (partition_key_name == null) {
+    return { "message": "partition_key_name field can't be null." };
+  }
+
+  if (content.Items == null) {
+    return { "message": "content.Items field can't be null." };
+  }
+
+  return null;
+}
+
+let getBatchWriteItemPromise = async (partition_key_name, table_name, items) => {
+
+  let putRequests = items.map((item) => {
     return {
       "PutRequest": {
         "Item": {
@@ -66,47 +185,13 @@ app.post('/upload-json', async (req, res) => {
     };
   });
 
-  let registrosPermitidos = 25;
+  let params = {
+    "RequestItems": { [table_name]: putRequests }
+  };
 
-  let totalRegistros = content.length;
-
-  let totalRequests = Math.ceil(totalRegistros / registrosPermitidos);
-
-  console.log("Total elementos a insertar:", totalRegistros)
-
-  console.log("Total requests a realizar:", totalRequests)
-
-  for (let request = 1; request <= totalRequests; request++) {
-    console.log("Request nro:", request)
-
-    let indiceCorte = content.length > registrosPermitidos ? registrosPermitidos : content.length;
-
-    let contentParcial = content.slice(0, indiceCorte);
-
-    console.log("Request nro:", request, "contentParcial total elementos:", contentParcial.length)
-
-    let params = {
-      "RequestItems": { [table_name]: contentParcial }
-    };
-
-    responseAPI.push(params);
-
-    dynamoDB.batchWriteItem(params, (err, data) => {
-      if (err) {
-        console.error("Error operación:", err);
-      } else {
-        console.log("Respuesta operación:", data);
-      }
-    });
-
-    content = content.slice(indiceCorte, content.length);
-
-    console.log("Request nro:", request, "content total elementos actualmente:", content.length)
-  }
-
-  res.json(responseAPI).status(200);
-});
+  await dynamoDB.batchWriteItem(params).promise();
+};
 
 server.listen(app.get("port"), () => {
-  console.log(`Servidor ejecutándose por el puerto ${app.get("port")}`);
+  logger.info(`Server running on port ${app.get("port")}`);
 });

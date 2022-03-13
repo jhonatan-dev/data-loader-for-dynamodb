@@ -76,3 +76,5 @@ iisnode
 #SonarQube
 sonar-project.properties
 .scannerwork
+
+debug.log
