@@ -1,5 +1,5 @@
 {
-  "name": "data-loader-for-dynamodb",
+  "name": "dynamo-data-loader",
   "version": "1.0.0",
   "description": "Load data to your tables of DynamoDB.",
   "main": "index.js",
@@ -11,9 +11,9 @@
     "test": "echo \"Tests not for now!\""
   },
   "keywords": [
-    "data-loader-for-dynamodb"
+    "dynamo-data-loader"
   ],
-  "author": "jhonatan-dev",
+  "author": "jhonatandevperu",
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.1090.0",
